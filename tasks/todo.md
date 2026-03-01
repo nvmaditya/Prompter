@@ -30,9 +30,11 @@
 - [x] Git commit + push Phase 3
 
 ## Phase 4: Communication Designer Agent
-- [ ] Write communication designer system prompt
-- [ ] Implement communication designer agent
-- [ ] Verify inter-agent map generation
+- [x] Write communication designer system prompt (communication_designer_system.txt)
+- [x] Implement communication designer agent (agents/communication_designer.py) with data coverage validation
+- [x] Write integration tests (test_communication_designer.py) — 14 tests
+- [x] Verify: 76 tests passing (41 unit + 10 analyzer + 11 architect + 14 comm designer)
+- [x] Git commit + push Phase 4
 
 ## Phase 5: Critic + Refiner Loop
 - [ ] Write critic and refiner system prompts
