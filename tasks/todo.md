@@ -15,17 +15,19 @@
 - [x] Git commit Phase 1
 
 ## Phase 2: Analyzer Agent
-- [ ] Write analyzer system prompt (analyzer_system.txt)
-- [ ] Implement analyzer agent (agents/analyzer.py)
-- [ ] Wire into CLI (generate command runs Analyzer)
-- [ ] Write integration tests (test_analyzer.py)
-- [ ] Verify with test input
-- [ ] Git commit + push Phase 2
+- [x] Write analyzer system prompt (analyzer_system.txt)
+- [x] Implement analyzer agent (agents/analyzer.py)
+- [x] Wire into CLI (generate command runs Analyzer)
+- [x] Write integration tests (test_analyzer.py) — 10 tests
+- [x] Verify: 51 tests passing (41 unit + 10 integration)
+- [x] Git commit + push Phase 2
 
 ## Phase 3: Architect Agent
-- [ ] Write architect system prompt
-- [ ] Implement architect agent with technique registry
-- [ ] Verify per-module prompt generation
+- [x] Write architect system prompt (architect_system.txt)
+- [x] Implement architect agent (agents/architect.py) with technique registry injection
+- [x] Write integration tests (test_architect.py) — 11 tests
+- [x] Verify: 62 tests passing (41 unit + 10 analyzer + 11 architect)
+- [x] Git commit + push Phase 3
 
 ## Phase 4: Communication Designer Agent
 - [ ] Write communication designer system prompt
