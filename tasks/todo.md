@@ -37,10 +37,13 @@
 - [x] Git commit + push Phase 4
 
 ## Phase 5: Critic + Refiner Loop
-- [ ] Write critic and refiner system prompts
-- [ ] Implement critic agent with scoring
-- [ ] Implement refiner agent
-- [ ] Verify quality loop
+- [x] Write critic system prompt (critic_system.txt) with 5-dimension rubric and weights
+- [x] Write refiner system prompt (refiner_system.txt)
+- [x] Implement critic agent (agents/critic.py) with best_prompt_versions tracking
+- [x] Implement refiner agent (agents/refiner.py) with selective revision
+- [x] Write integration tests — 12 critic + 10 refiner = 22 tests
+- [x] Verify: 98 tests passing (41 unit + 10 analyzer + 11 architect + 14 comm designer + 12 critic + 10 refiner)
+- [x] Git commit + push Phase 5
 
 ## Phase 6: Packager + Output
 - [ ] Implement JSON writer
