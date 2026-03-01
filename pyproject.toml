@@ -51,3 +51,4 @@ warn_unused_configs = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = ["slow: marks tests as slow (run with '-m slow')"]

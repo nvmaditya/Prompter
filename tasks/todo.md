@@ -65,7 +65,13 @@
 - [x] Git commit + push Phase 7
 
 ## Phase 8: Testing + Polish
-- [ ] Integration tests for all agents
-- [ ] Error scenario tests
-- [ ] CLI polish and help text
-- [ ] Final verification
+- [x] Create tests/unit/test_state.py — 8 tests for PipelineState creation and defaults
+- [x] Create tests/unit/test_llm_client.py — 18 tests for JSON extraction, rate limiting, 3-layer retry
+- [x] Create tests/integration/test_checkpoint.py — 10 tests for save/load round-trip with real file I/O
+- [x] Create tests/integration/test_cli_polish.py — 6 tests for help text, error messages, input validation
+- [x] Create tests/regression/test_real_api.py — 4 real Groq API smoke tests (marked @slow)
+- [x] Fix LLM client: json.loads(strict=False) for LLM responses with control characters
+- [x] Add pytest slow marker to pyproject.toml
+- [x] Verify: 190 tests total (186 mocked pass + 4 real API)
+- [x] Real API test: 5/6 pipeline stages passed before daily token limit exhausted
+- [x] Git commit + push Phase 8

@@ -198,7 +198,7 @@ def call_llm(
     # Layer 3: Schema self-healing
     for attempt in range(schema_retry_limit + 1):
         try:
-            data = json.loads(json_str)
+            data = json.loads(json_str, strict=False)
             return response_model.model_validate(data)
         except (json.JSONDecodeError, ValidationError) as e:
             if attempt >= schema_retry_limit:
