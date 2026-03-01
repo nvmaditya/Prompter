@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     retry_base_delay: float = 1.0
     schema_retry_limit: int = 2
     llm_timeout_seconds: int = 60
+    llm_max_tokens: int = 4096
 
     # --- Rate limiting ---
     rate_limit_tier: str = "free"  # "free" or "paid"

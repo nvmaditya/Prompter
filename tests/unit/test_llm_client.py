@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from prompter.config import Settings
 from prompter.llm.client import (
     SchemaValidationError,
+    _compact_schema,
     _extract_json,
     _enforce_rate_limit,
     call_llm,
@@ -100,6 +101,35 @@ class TestExtractJson:
         raw = '```json\n{\n  "name": "test",\n  "value": 99\n}\n```'
         result = _extract_json(raw)
         assert json.loads(result) == {"name": "test", "value": 99}
+
+
+# ── Compact Schema Tests ─────────────────────────────────────────────
+
+
+class TestCompactSchema:
+    """Tests for _compact_schema() helper."""
+
+    def test_returns_valid_json(self):
+        """Compact schema produces valid JSON."""
+        result = _compact_schema(SimpleModel)
+        parsed = json.loads(result)
+        assert "properties" in parsed
+
+    def test_no_defs_in_output(self):
+        """Compact schema strips $defs metadata."""
+        result = _compact_schema(SimpleModel)
+        assert "$defs" not in result
+
+    def test_no_title_in_output(self):
+        """Compact schema strips title metadata."""
+        result = _compact_schema(SimpleModel)
+        assert '"title"' not in result
+
+    def test_shorter_than_full_schema(self):
+        """Compact schema is smaller than full model_json_schema."""
+        full = json.dumps(SimpleModel.model_json_schema(), indent=2)
+        compact = _compact_schema(SimpleModel)
+        assert len(compact) < len(full)
 
 
 # ── Rate Limit Tests ──────────────────────────────────────────────────
