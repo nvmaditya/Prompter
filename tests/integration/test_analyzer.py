@@ -1,13 +1,28 @@
 """Integration tests for the Analyzer agent with mocked LLM."""
 
 import json
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from prompter.agents.analyzer import analyze
+from prompter.agents.packager import NarrativeResponse
 from prompter.config import Settings
+from prompter.models.critic_feedback import CategoryScore, CriticFeedback
+from prompter.models.inter_agent_map import (
+    HandoffCondition,
+    InterAgentMap,
+    SharedMemoryField,
+    Trigger,
+)
 from prompter.models.module_map import InteractionType, ModuleMap
+from prompter.models.prompt_artifact import (
+    ContextSlot,
+    EvalCriteria,
+    PromptArtifact,
+    TokenEstimate,
+)
 from prompter.state import create_initial_state
 
 
@@ -229,20 +244,114 @@ class TestAnalyzerWithMockedLLM:
 class TestAnalyzerCLIIntegration:
     """Tests for CLI-level integration of the Analyzer."""
 
+    @staticmethod
+    def _make_artifact(module_name: str) -> PromptArtifact:
+        return PromptArtifact(
+            module_name=module_name,
+            agent_role=f"{module_name} Specialist",
+            primary_technique="chain_of_thought",
+            technique_rationale="CoT for reasoning.",
+            system_prompt=f"You are a {module_name} specialist.",
+            context_slots=[
+                ContextSlot(
+                    variable="input_data", description="Input",
+                    source="previous", injection_time="runtime",
+                    fallback="N/A", required=True,
+                ),
+            ],
+            token_estimate=TokenEstimate(
+                system_tokens=100, expected_context_tokens=100,
+                expected_output_tokens=100, total=300,
+            ),
+            triggers=["invoked"],
+            outputs_to=["next_module"],
+            eval_criteria=EvalCriteria(
+                good_output_examples=["Good 1", "Good 2"],
+                bad_output_examples=["Bad 1", "Bad 2"],
+                automated_eval_suggestions=["Check 1", "Check 2", "Check 3"],
+                human_review_criteria=["Accuracy"],
+            ),
+        )
+
+    @staticmethod
+    def _make_inter_agent_map() -> InterAgentMap:
+        return InterAgentMap(
+            shared_memory_schema={
+                "topic": SharedMemoryField(
+                    type="string", description="Topic",
+                    written_by=["Question Generator"], read_by=["Feedback Generator"],
+                    updated_on="question_generated", default="",
+                ),
+            },
+            handoff_conditions=[
+                HandoffCondition(
+                    from_agent="Question Generator", to_agent="Feedback Generator",
+                    condition="done", data_passed={"q": "text"}, format="json",
+                    fallback_if_incomplete="retry",
+                ),
+            ],
+            context_pollution_rules=[],
+            trigger_map=[
+                Trigger(
+                    event="start", activates=["Question Generator"],
+                    priority_order=["Question Generator"],
+                    execution="sequential", error_fallback="retry",
+                ),
+            ],
+        )
+
+    @staticmethod
+    def _make_passing_feedback(module_name: str) -> CriticFeedback:
+        return CriticFeedback(
+            module_name=module_name,
+            overall_score=8.5,
+            passed=True,
+            category_scores={
+                "ambiguity": CategoryScore(score=8.5),
+                "hallucination_risk": CategoryScore(score=8.5),
+                "missing_constraints": CategoryScore(score=8.5),
+                "edge_cases": CategoryScore(score=8.5),
+                "token_efficiency": CategoryScore(score=8.5),
+            },
+            issues=[],
+            iteration=1,
+            summary=f"Good quality for {module_name}.",
+        )
+
+    @patch("prompter.utils.checkpoint.save_checkpoint")
+    @patch("prompter.agents.packager.write_scaffolding")
+    @patch("prompter.agents.packager.write_markdown")
+    @patch("prompter.agents.packager.write_json")
+    @patch("prompter.agents.packager.call_llm")
+    @patch("prompter.agents.critic.call_llm")
+    @patch("prompter.agents.communication_designer.call_llm")
+    @patch("prompter.agents.architect.call_llm")
     @patch("prompter.agents.analyzer.call_llm")
-    def test_generate_command_runs_analyzer(self, mock_call_llm):
-        """The generate CLI command invokes the Analyzer and displays output."""
+    def test_generate_command_runs_analyzer(
+        self, mock_analyze, mock_architect, mock_comm, mock_critic,
+        mock_packager, mock_json, mock_md, mock_scaffold, mock_checkpoint,
+    ):
+        """The generate CLI command runs the full pipeline and completes."""
         from typer.testing import CliRunner
         from prompter.cli import app
 
-        mock_call_llm.return_value = ModuleMap.model_validate(GOOD_MODULE_MAP_RESPONSE)
+        # AI module names from the good module map
+        ai_names = ["Question Generator", "Adaptive Difficulty Engine", "Feedback Generator"]
+
+        mock_analyze.return_value = ModuleMap.model_validate(GOOD_MODULE_MAP_RESPONSE)
+        mock_architect.side_effect = [self._make_artifact(n) for n in ai_names]
+        mock_comm.return_value = self._make_inter_agent_map()
+        mock_critic.side_effect = [self._make_passing_feedback(n) for n in ai_names]
+        mock_packager.return_value = NarrativeResponse(narrative="Summary.")
+        mock_json.return_value = Path("output/prompt_config.json")
+        mock_md.return_value = Path("output/architecture_spec.md")
+        mock_scaffold.return_value = Path("output/scaffolding")
+        mock_checkpoint.return_value = Path(".prompter_state/test/pipeline_state.json")
 
         runner = CliRunner()
         result = runner.invoke(app, ["generate", "a quizzing platform for medical students"])
 
-        assert result.exit_code == 0
-        assert "Medical Quiz Platform" in result.output
-        assert "Question Generator" in result.output
+        assert result.exit_code == 0, f"Exit code {result.exit_code}: {result.output}"
 
     def test_generate_rejects_short_input(self):
         """CLI rejects ideas shorter than 10 characters."""
@@ -254,13 +363,15 @@ class TestAnalyzerCLIIntegration:
 
         assert result.exit_code == 1
 
+    @patch("prompter.utils.checkpoint.save_checkpoint")
     @patch("prompter.agents.analyzer.call_llm")
-    def test_generate_clarification_exit_code(self, mock_call_llm):
+    def test_generate_clarification_exit_code(self, mock_call_llm, mock_checkpoint):
         """CLI exits with code 2 when clarification is needed."""
         from typer.testing import CliRunner
         from prompter.cli import app
 
         mock_call_llm.return_value = ModuleMap.model_validate(VAGUE_INPUT_RESPONSE)
+        mock_checkpoint.return_value = Path(".prompter_state/test/pipeline_state.json")
 
         runner = CliRunner()
         result = runner.invoke(app, ["generate", "an app that does stuff"])

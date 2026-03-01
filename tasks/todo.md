@@ -56,10 +56,13 @@
 - [x] Git commit + push Phase 6
 
 ## Phase 7: LangGraph Integration
-- [ ] Build StateGraph with all nodes/edges
-- [ ] Full CLI implementation (generate + interactive)
-- [ ] Checkpoint/resume support
-- [ ] End-to-end verification
+- [x] Add Pydantic model deserialization to checkpoint.py (_MODEL_REGISTRY + recursive _deserialize_value)
+- [x] Create prompter/graph.py — StateGraph builder, routing functions, resume helper
+- [x] Overhaul prompter/cli.py — full pipeline generate, interactive with review gate, streaming progress
+- [x] Update test_analyzer.py CLI tests for full pipeline mocks
+- [x] Write tests/integration/test_graph.py — 25 tests (graph construction, routing, E2E pipeline, CLI)
+- [x] Verify: 144 tests passing (119 existing + 25 new)
+- [x] Git commit + push Phase 7
 
 ## Phase 8: Testing + Polish
 - [ ] Integration tests for all agents

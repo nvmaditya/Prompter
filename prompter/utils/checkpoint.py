@@ -1,5 +1,6 @@
 """Pipeline checkpoint save/load for resume support."""
 
+import importlib
 import json
 import logging
 from pathlib import Path
@@ -7,6 +8,38 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 _STATE_DIR = Path(".prompter_state")
+
+# Registry mapping __pydantic__ class names to their import paths
+_MODEL_REGISTRY: dict[str, str] = {
+    "ModuleMap": "prompter.models.module_map:ModuleMap",
+    "PromptArtifact": "prompter.models.prompt_artifact:PromptArtifact",
+    "InterAgentMap": "prompter.models.inter_agent_map:InterAgentMap",
+    "CriticFeedback": "prompter.models.critic_feedback:CriticFeedback",
+    "FinalOutputArtifact": "prompter.models.final_output:FinalOutputArtifact",
+}
+
+
+def _resolve_model(name: str):
+    """Lazily import and return a Pydantic model class by its class name."""
+    if name not in _MODEL_REGISTRY:
+        return None
+    module_path, class_name = _MODEL_REGISTRY[name].rsplit(":", 1)
+    module = importlib.import_module(module_path)
+    return getattr(module, class_name)
+
+
+def _deserialize_value(value):
+    """Recursively deserialize __pydantic__ markers back to model instances."""
+    if isinstance(value, dict) and "__pydantic__" in value:
+        model_cls = _resolve_model(value["__pydantic__"])
+        if model_cls is not None:
+            return model_cls.model_validate(value["data"])
+        return value["data"]  # fallback: return raw data
+    if isinstance(value, list):
+        return [_deserialize_value(item) for item in value]
+    if isinstance(value, dict):
+        return {k: _deserialize_value(v) for k, v in value.items()}
+    return value
 
 
 def _serialize_state(state: dict) -> dict:
@@ -80,13 +113,16 @@ def save_checkpoint(state: dict, run_id: str) -> Path:
 
 
 def load_checkpoint(path: str | Path) -> dict:
-    """Load pipeline state from a checkpoint file.
+    """Load and deserialize pipeline state from a checkpoint file.
+
+    Reconstructs Pydantic model instances from __pydantic__ markers
+    so that agents receive proper model objects (not raw dicts).
 
     Args:
         path: Path to the checkpoint directory or JSON file.
 
     Returns:
-        The deserialized state dict.
+        The deserialized state dict with Pydantic models restored.
 
     Raises:
         FileNotFoundError: If checkpoint doesn't exist.
@@ -99,5 +135,6 @@ def load_checkpoint(path: str | Path) -> dict:
         raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
 
     data = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+    deserialized = {k: _deserialize_value(v) for k, v in data.items()}
     logger.info(f"Checkpoint loaded: {checkpoint_path}")
-    return data
+    return deserialized
