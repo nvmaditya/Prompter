@@ -3,22 +3,24 @@
 ## Phase 0: Project Scaffolding
 - [x] Create pyproject.toml, .gitignore, .env.example
 - [x] Create prompter package (__init__, __main__, cli)
-- [ ] Git init + initial commit
-- [ ] pip install -e ".[dev]" and verify CLI
+- [x] Git init + initial commit
+- [x] pip install -e ".[dev]" and verify CLI
 
 ## Phase 1: Foundation Layer
-- [ ] Create Pydantic data models (models/)
-- [ ] Create PipelineState and config
-- [ ] Create LLM client with retry logic (llm/)
-- [ ] Create utilities (tokens, checkpoint, logging)
-- [ ] Create unit tests and verify
-- [ ] Git commit Phase 1
+- [x] Create Pydantic data models (models/)
+- [x] Create PipelineState and config
+- [x] Create LLM client with retry logic (llm/)
+- [x] Create utilities (tokens, checkpoint, logging)
+- [x] Create unit tests and verify (41 tests passing)
+- [x] Git commit Phase 1
 
 ## Phase 2: Analyzer Agent
-- [ ] Write analyzer system prompt
-- [ ] Implement analyzer agent
-- [ ] Wire into CLI
+- [ ] Write analyzer system prompt (analyzer_system.txt)
+- [ ] Implement analyzer agent (agents/analyzer.py)
+- [ ] Wire into CLI (generate command runs Analyzer)
+- [ ] Write integration tests (test_analyzer.py)
 - [ ] Verify with test input
+- [ ] Git commit + push Phase 2
 
 ## Phase 3: Architect Agent
 - [ ] Write architect system prompt

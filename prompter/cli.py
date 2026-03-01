@@ -1,9 +1,14 @@
 """CLI interface for the Prompt Engineering Engine."""
 
+import sys
+import uuid
+from pathlib import Path
 from typing import Optional
 
 import typer
 from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
 from prompter import __version__
 
@@ -12,12 +17,13 @@ app = typer.Typer(
     help="A multi-agent AI system that builds prompt architectures from project ideas.",
     no_args_is_help=True,
 )
-console = Console()
+console = Console(stderr=True)
+output_console = Console()
 
 
 def version_callback(value: bool) -> None:
     if value:
-        console.print(f"prompter {__version__}")
+        output_console.print(f"prompter {__version__}")
         raise typer.Exit()
 
 
@@ -30,6 +36,62 @@ def main(
     """Prompter — build prompt architectures from project ideas."""
 
 
+def _load_idea(idea: str) -> str:
+    """Load idea from argument — supports inline text or file path."""
+    path = Path(idea)
+    if path.exists() and path.suffix in (".txt", ".md"):
+        text = path.read_text(encoding="utf-8").strip()
+        if not text:
+            console.print("[red]Error: Input file is empty.[/red]")
+            raise typer.Exit(code=1)
+        return text
+    return idea
+
+
+def _validate_idea(idea: str) -> None:
+    """Validate idea length constraints (10-10,000 chars)."""
+    if len(idea) < 10:
+        console.print(
+            "[red]Error: Project idea is too short (minimum 10 characters).[/red]\n"
+            "Provide a more detailed description of your project."
+        )
+        raise typer.Exit(code=1)
+    if len(idea) > 10_000:
+        console.print(
+            "[red]Error: Project idea is too long (maximum 10,000 characters).[/red]\n"
+            "Summarize your project idea to fit within the limit."
+        )
+        raise typer.Exit(code=1)
+
+
+def _display_module_map(module_map) -> None:
+    """Display a ModuleMap using rich formatting."""
+    # Header
+    output_console.print(Panel(
+        f"[bold]{module_map.project_name}[/bold]\n"
+        f"Domain: {module_map.domain_classification.primary}"
+        + (f" + {', '.join(module_map.domain_classification.secondary)}" if module_map.domain_classification.secondary else "")
+        + f"\nInteraction Model: {module_map.interaction_model.value}\n"
+        f"Rationale: {module_map.interaction_model_rationale}",
+        title="Project Analysis",
+        border_style="green",
+    ))
+
+    # Module table
+    table = Table(title=f"Modules ({module_map.module_count} total, {module_map.ai_module_count} AI)")
+    table.add_column("#", style="dim", width=3)
+    table.add_column("Module", style="cyan", min_width=20)
+    table.add_column("AI?", justify="center", width=5)
+    table.add_column("Type", width=14)
+    table.add_column("Description", min_width=30)
+
+    for i, mod in enumerate(module_map.modules, 1):
+        ai_marker = "[green]Yes[/green]" if mod.requires_ai else "[dim]No[/dim]"
+        table.add_row(str(i), mod.name, ai_marker, mod.interaction_type.value, mod.description)
+
+    output_console.print(table)
+
+
 @app.command()
 def generate(
     idea: str = typer.Argument(..., help="Project idea description (text or path to .txt file)."),
@@ -38,8 +100,68 @@ def generate(
     verbose: bool = typer.Option(False, "--verbose", help="Enable detailed debug output."),
 ) -> None:
     """Generate a complete prompt architecture from a project idea."""
-    console.print("[yellow]generate command not yet implemented[/yellow]")
-    raise typer.Exit(code=0)
+    from prompter.agents.analyzer import analyze
+    from prompter.config import Settings
+    from prompter.state import create_initial_state
+    from prompter.utils.logging import setup_logging
+
+    setup_logging(verbose)
+
+    # Load and validate idea
+    idea_text = _load_idea(idea)
+    _validate_idea(idea_text)
+
+    # Load settings
+    try:
+        settings = Settings()
+    except Exception as e:
+        console.print(
+            f"[red]Configuration error: {e}[/red]\n\n"
+            "Make sure GROQ_API_KEY is set in your environment or .env file.\n"
+            "See .env.example for the required configuration."
+        )
+        raise typer.Exit(code=3)
+
+    # Create initial state
+    run_id = uuid.uuid4().hex[:12]
+    state = create_initial_state(
+        project_idea=idea_text,
+        config=settings.safe_dict(),
+        run_id=run_id,
+        max_iterations=settings.max_iterations,
+        quality_threshold=settings.quality_threshold,
+    )
+
+    # Run Analyzer
+    with console.status("[bold green]Analyzing project idea...", spinner="dots"):
+        try:
+            updates = analyze(state, settings=settings)
+        except Exception as e:
+            console.print(f"[red]Analyzer failed: {e}[/red]")
+            if verbose:
+                console.print_exception()
+            raise typer.Exit(code=1)
+
+    state.update(updates)
+
+    # Handle clarification
+    if state["needs_clarification"]:
+        output_console.print(Panel(
+            "\n".join(f"  {i}. {q}" for i, q in enumerate(state["clarification_questions"], 1)),
+            title="[yellow]Clarification Needed[/yellow]",
+            border_style="yellow",
+        ))
+        output_console.print(
+            "\n[yellow]The idea needs more detail. Please refine your description and try again.[/yellow]"
+        )
+        raise typer.Exit(code=2)
+
+    # Display results
+    _display_module_map(state["module_map"])
+
+    duration = state["agent_durations"].get("analyzer", 0)
+    console.print(f"\n[dim]Analyzer completed in {duration:.1f}s[/dim]")
+    console.print("[yellow]Remaining pipeline stages not yet implemented.[/yellow]")
 
 
 @app.command()
