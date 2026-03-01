@@ -46,10 +46,14 @@
 - [x] Git commit + push Phase 5
 
 ## Phase 6: Packager + Output
-- [ ] Implement JSON writer
-- [ ] Implement Markdown writer
-- [ ] Implement scaffold writer
-- [ ] Verify all output formats
+- [x] Implement JSON writer (output/json_writer.py) — deterministic FinalOutputArtifact serialization
+- [x] Implement Markdown writer (output/markdown_writer.py) — hybrid LLM narrative + Python tables
+- [x] Implement scaffold writer (output/scaffold_writer.py) — starter code generation
+- [x] Write packager system prompt (packager_system.txt) — technical documentation specialist
+- [x] Implement packager agent (agents/packager.py) — assembles artifact, LLM narrative, writes all outputs
+- [x] Write integration tests (test_packager.py) — 21 tests (6 packager + 3 JSON + 6 Markdown + 6 scaffold)
+- [x] Verify: 119 tests passing (41 unit + 10 analyzer + 11 architect + 14 comm designer + 12 critic + 10 refiner + 21 packager)
+- [x] Git commit + push Phase 6
 
 ## Phase 7: LangGraph Integration
 - [ ] Build StateGraph with all nodes/edges

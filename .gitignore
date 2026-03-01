@@ -30,7 +30,7 @@ Thumbs.db
 
 # Project-specific
 .prompter_state/
-output/
+/output/
 
 # Claude temp files
 tmpclaude-*
