@@ -1,6 +1,6 @@
 # Prompter
 
-A multi-agent AI system that transforms natural-language project ideas into complete prompt architectures. Given a description like *"a quizzing platform for medical students"*, Prompter decomposes the project into modules, generates tailored system prompts with techniques like chain-of-thought and few-shot learning, designs inter-agent communication, scores quality across five dimensions, and outputs production-ready configuration files.
+A multi-agent AI system that transforms natural-language project ideas into complete prompt architectures. Given a description like _"a quizzing platform for medical students"_, Prompter decomposes the project into modules, generates tailored system prompts with techniques like chain-of-thought and few-shot learning, designs inter-agent communication, scores quality across five dimensions, and outputs production-ready configuration files.
 
 Built with [LangGraph](https://github.com/langchain-ai/langgraph) for orchestration and [Groq](https://groq.com/) for fast LLM inference.
 
@@ -27,14 +27,14 @@ Project Idea
 
 **6-agent pipeline:**
 
-| Agent | Role |
-|-------|------|
-| **Analyzer** | Decomposes the idea into a `ModuleMap` with domain classification and interaction model |
-| **Architect** | Generates `PromptArtifact` per AI module — technique selection, context slots, eval criteria |
-| **Communication Designer** | Creates an `InterAgentMap` — shared memory schema, handoff conditions, triggers |
-| **Critic** | Scores each prompt on 5 dimensions (clarity, compliance, robustness, creativity, measurability) |
-| **Refiner** | Iteratively revises prompts that score below the quality threshold |
-| **Packager** | Assembles final JSON config, Markdown spec, and Python scaffolding |
+| Agent                      | Role                                                                                            |
+| -------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Analyzer**               | Decomposes the idea into a `ModuleMap` with domain classification and interaction model         |
+| **Architect**              | Generates `PromptArtifact` per AI module — technique selection, context slots, eval criteria    |
+| **Communication Designer** | Creates an `InterAgentMap` — shared memory schema, handoff conditions, triggers                 |
+| **Critic**                 | Scores each prompt on 5 dimensions (clarity, compliance, robustness, creativity, measurability) |
+| **Refiner**                | Iteratively revises prompts that score below the quality threshold                              |
+| **Packager**               | Assembles final JSON config, Markdown spec, and Python scaffolding                              |
 
 The Critic-Refiner loop runs up to 3 iterations (configurable), only revising prompts that haven't passed.
 
@@ -66,14 +66,14 @@ GROQ_MODEL=llama-3.3-70b-versatile
 
 Optional overrides:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `GROQ_MODEL` | `llama-3.3-70b-versatile` | Groq model to use (`llama-3.1-8b-instant` also supported) |
-| `PROMPTER_QUALITY_THRESHOLD` | `7.0` | Minimum critic score (0-10) for a prompt to pass |
-| `PROMPTER_MAX_ITERATIONS` | `3` | Max critic-refiner loop iterations |
-| `PROMPTER_RATE_LIMIT_TIER` | `free` | `free` (adds delays between requests) or `paid` |
-| `PROMPTER_LLM_MAX_TOKENS` | `4096` | Max response tokens per LLM call |
-| `PROMPTER_VERBOSE` | `false` | Enable debug logging |
+| Variable                     | Default                   | Description                                               |
+| ---------------------------- | ------------------------- | --------------------------------------------------------- |
+| `GROQ_MODEL`                 | `llama-3.3-70b-versatile` | Groq model to use (`llama-3.1-8b-instant` also supported) |
+| `PROMPTER_QUALITY_THRESHOLD` | `7.0`                     | Minimum critic score (0-10) for a prompt to pass          |
+| `PROMPTER_MAX_ITERATIONS`    | `3`                       | Max critic-refiner loop iterations                        |
+| `PROMPTER_RATE_LIMIT_TIER`   | `free`                    | `free` (adds delays between requests) or `paid`           |
+| `PROMPTER_LLM_MAX_TOKENS`    | `4096`                    | Max response tokens per LLM call                          |
+| `PROMPTER_VERBOSE`           | `false`                   | Enable debug logging                                      |
 
 ## Usage
 
@@ -116,16 +116,20 @@ prompter generate "your project idea" --resume .prompter_state/<run-id>
 Prompter generates three artifacts in the output directory:
 
 ### `prompt_config.json`
+
 Complete machine-readable configuration — all modules, prompts, context slots, communication maps, and quality scores. Validates against the `FinalOutputArtifact` Pydantic schema.
 
 ### `architecture_spec.md`
+
 Human-readable Markdown document with:
+
 - Project overview and module breakdown
 - Full system prompts with technique explanations
 - Inter-agent communication design
 - Quality scores and improvement history
 
 ### `scaffolding/`
+
 A starter Python project:
 
 ```
@@ -175,6 +179,7 @@ pytest tests/ -v
 ```
 
 The test suite covers:
+
 - **Unit tests** — Pydantic models, LLM client retry layers, JSON extraction, token counting, state creation
 - **Integration tests** — Each agent end-to-end (mocked LLM), LangGraph routing, checkpoint round-trip, CLI validation
 - **Regression tests** — Full pipeline against live Groq API

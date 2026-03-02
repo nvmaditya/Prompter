@@ -1,5 +1,6 @@
 """CLI interface for the Prompt Engineering Engine."""
 
+import re
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -61,6 +62,17 @@ def _validate_idea(idea: str) -> None:
             "Summarize your project idea to fit within the limit."
         )
         raise typer.Exit(code=1)
+
+
+def _slugify(text: str, max_length: int = 50) -> str:
+    """Convert text to a filesystem-safe slug.
+
+    Lowercase, replace non-alphanumeric runs with hyphens, truncate on word boundary.
+    """
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    if len(slug) > max_length:
+        slug = slug[:max_length].rsplit("-", 1)[0]
+    return slug or "project"
 
 
 def _display_module_map(module_map) -> None:
@@ -274,8 +286,13 @@ def generate(
     # ── New execution path ───────────────────────────────────────────
     idea_text = _load_idea(idea)
     _validate_idea(idea_text)
+    slug = _slugify(idea_text)
 
-    run_id = uuid.uuid4().hex[:12]
+    # Auto-derive output subfolder from task name (unless user specified --output)
+    if not output_dir:
+        settings = settings.model_copy(update={"output_dir": str(Path(settings.output_dir) / slug)})
+
+    run_id = f"{slug}_{uuid.uuid4().hex[:12]}"
     state = create_initial_state(
         project_idea=idea_text,
         config=settings.safe_dict(),
@@ -330,6 +347,7 @@ def interactive(
 
     idea_text = _load_idea(idea)
     _validate_idea(idea_text)
+    slug = _slugify(idea_text)
 
     # Load settings
     try:
@@ -340,10 +358,12 @@ def interactive(
 
     if output_dir:
         settings = settings.model_copy(update={"output_dir": output_dir})
+    else:
+        settings = settings.model_copy(update={"output_dir": str(Path(settings.output_dir) / slug)})
     if verbose:
         settings = settings.model_copy(update={"verbose": verbose})
 
-    run_id = uuid.uuid4().hex[:12]
+    run_id = f"{slug}_{uuid.uuid4().hex[:12]}"
     state = create_initial_state(
         project_idea=idea_text,
         config=settings.safe_dict(),
